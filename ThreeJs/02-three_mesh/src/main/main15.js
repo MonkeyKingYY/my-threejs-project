@@ -6,10 +6,9 @@ import gsap from "gsap";
 // 导入dat.gui
 import * as dat from "dat.gui";
 import { RGBELoader } from "three/examples/jsm/loaders/RGBELoader";
-import { MeshBasicMaterial } from "three";
-// 目标：点光源
+// 目标：聚光灯
 
-// const gui = new dat.GUI();
+const gui = new dat.GUI();
 // 1、创建场景
 const scene = new THREE.Scene();
 
@@ -46,31 +45,36 @@ scene.add(plane);
 // 环境光
 const light = new THREE.AmbientLight(0xffffff, 0.5); // soft white light
 scene.add(light);
-
-const smallBall = new THREE.Mesh(
-  new THREE.SphereBufferGeometry(0.1, 20, 20),
-  new THREE.MeshBasicMaterial({ color: 0xff0000 })
-);
-smallBall.position.set(2, 2, 2);
 //直线光源
-const pointLight = new THREE.PointLight(0xff0000, 1);
-// pointLight.position.set(2, 2, 2);
-pointLight.castShadow = true;
+const spotLight = new THREE.SpotLight(0xffffff, 1);
+spotLight.position.set(5, 5, 5);
+spotLight.castShadow = true;
+spotLight.intensity = 2;
 
 // 设置阴影贴图模糊度
-pointLight.shadow.radius = 20;
+spotLight.shadow.radius = 20;
 // 设置阴影贴图的分辨率
-pointLight.shadow.mapSize.set(512, 512);
-pointLight.decay = 0;
+spotLight.shadow.mapSize.set(512, 512);
+
+// console.log(directionalLight.shadow);
+spotLight.target = sphere;
+spotLight.angle = Math.PI / 6;
+spotLight.distance = 0;
+spotLight.penumbra = 0;
+spotLight.decay = 0;
 
 // 设置透视相机的属性
-smallBall.add(pointLight);
-scene.add(smallBall);
 
-// gui.add(pointLight.position, "x").min(-5).max(5).step(0.1);
-
-// gui.add(pointLight, "distance").min(0).max(5).step(0.001);
-// gui.add(pointLight, "decay").min(0).max(5).step(0.01);
+scene.add(spotLight);
+gui.add(sphere.position, "x").min(-5).max(5).step(0.1);
+gui
+  .add(spotLight, "angle")
+  .min(0)
+  .max(Math.PI / 2)
+  .step(0.01);
+gui.add(spotLight, "distance").min(0).max(10).step(0.01);
+gui.add(spotLight, "penumbra").min(0).max(1).step(0.01);
+gui.add(spotLight, "decay").min(0).max(5).step(0.01);
 
 // 初始化渲染器
 const renderer = new THREE.WebGLRenderer();
@@ -99,10 +103,6 @@ scene.add(axesHelper);
 const clock = new THREE.Clock();
 
 function render() {
-  let time = clock.getElapsedTime();
-  smallBall.position.x = Math.sin(time) * 3;
-  smallBall.position.z = Math.cos(time) * 3;
-  smallBall.position.y = 2 + Math.sin(time * 10) / 2;
   controls.update();
   renderer.render(scene, camera);
   //   渲染下一帧的时候就会调用render函数

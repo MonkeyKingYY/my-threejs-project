@@ -45392,15 +45392,9 @@ function _interopRequireWildcard(obj, nodeInterop) { if (!nodeInterop && obj && 
 
 // 导入dat.gui
 
-// 目标：设置环境纹理
-// 加载hdr环境图
-var rgbeLoader = new _RGBELoader.RGBELoader();
-rgbeLoader.loadAsync("textures/hdr/002.hdr").then(function (texture) {
-  texture.mapping = THREE.EquirectangularReflectionMapping;
-  scene.background = texture;
-  scene.environment = texture;
-});
+// 目标：点光源
 
+// const gui = new dat.GUI();
 // 1、创建场景
 var scene = new THREE.Scene();
 
@@ -45410,38 +45404,58 @@ var camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHei
 // 设置相机位置
 camera.position.set(0, 0, 10);
 scene.add(camera);
-
-// 设置cube纹理加载器
-var cubeTextureLoader = new THREE.CubeTextureLoader();
-var envMapTexture = cubeTextureLoader.load(["textures/environmentMaps/1/px.jpg", "textures/environmentMaps/1/nx.jpg", "textures/environmentMaps/1/py.jpg", "textures/environmentMaps/1/ny.jpg", "textures/environmentMaps/1/pz.jpg", "textures/environmentMaps/1/nz.jpg"]);
 var sphereGeometry = new THREE.SphereBufferGeometry(1, 20, 20);
-var material = new THREE.MeshStandardMaterial({
-  metalness: 0.7,
-  roughness: 0.1
-  //   envMap: envMapTexture,
-});
-
+var material = new THREE.MeshStandardMaterial();
 var sphere = new THREE.Mesh(sphereGeometry, material);
+// 投射阴影
+sphere.castShadow = true;
 scene.add(sphere);
 
-// 给场景添加背景
-scene.background = envMapTexture;
-// 给场景所有的物体添加默认的环境贴图
-scene.environment = envMapTexture;
+// // 创建平面
+var planeGeometry = new THREE.PlaneBufferGeometry(50, 50);
+var plane = new THREE.Mesh(planeGeometry, material);
+plane.position.set(0, -1, 0);
+plane.rotation.x = -Math.PI / 2;
+// 接收阴影
+plane.receiveShadow = true;
+scene.add(plane);
 
 // 灯光
 // 环境光
 var light = new THREE.AmbientLight(0xffffff, 0.5); // soft white light
 scene.add(light);
+var smallBall = new THREE.Mesh(new THREE.SphereBufferGeometry(0.1, 20, 20), new THREE.MeshBasicMaterial({
+  color: 0xff0000
+}));
+smallBall.position.set(2, 2, 2);
 //直线光源
-var directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
-directionalLight.position.set(10, 10, 10);
-scene.add(directionalLight);
+var pointLight = new THREE.PointLight(0xff0000, 1);
+// pointLight.position.set(2, 2, 2);
+pointLight.castShadow = true;
+
+// 设置阴影贴图模糊度
+pointLight.shadow.radius = 20;
+// 设置阴影贴图的分辨率
+pointLight.shadow.mapSize.set(512, 512);
+pointLight.decay = 0;
+
+// 设置透视相机的属性
+smallBall.add(pointLight);
+scene.add(smallBall);
+
+// gui.add(pointLight.position, "x").min(-5).max(5).step(0.1);
+
+// gui.add(pointLight, "distance").min(0).max(5).step(0.001);
+// gui.add(pointLight, "decay").min(0).max(5).step(0.01);
 
 // 初始化渲染器
 var renderer = new THREE.WebGLRenderer();
 // 设置渲染的尺寸大小
 renderer.setSize(window.innerWidth, window.innerHeight);
+// 开启场景中的阴影贴图
+renderer.shadowMap.enabled = true;
+renderer.physicallyCorrectLights = true;
+
 // console.log(renderer);
 // 将webgl渲染的canvas内容添加到body
 document.body.appendChild(renderer.domElement);
@@ -45460,6 +45474,10 @@ scene.add(axesHelper);
 // 设置时钟
 var clock = new THREE.Clock();
 function render() {
+  var time = clock.getElapsedTime();
+  smallBall.position.x = Math.sin(time) * 3;
+  smallBall.position.z = Math.cos(time) * 3;
+  smallBall.position.y = 2 + Math.sin(time * 10) / 2;
   controls.update();
   renderer.render(scene, camera);
   //   渲染下一帧的时候就会调用render函数
@@ -45505,7 +45523,7 @@ var parent = module.bundle.parent;
 if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
   var hostname = "" || location.hostname;
   var protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-  var ws = new WebSocket(protocol + '://' + hostname + ':' + "60598" + '/');
+  var ws = new WebSocket(protocol + '://' + hostname + ':' + "60804" + '/');
   ws.onmessage = function (event) {
     checkedAssets = {};
     assetsToAccept = [];

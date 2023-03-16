@@ -6,10 +6,15 @@ import gsap from "gsap";
 // 导入dat.gui
 import * as dat from "dat.gui";
 import { RGBELoader } from "three/examples/jsm/loaders/RGBELoader";
-import { MeshBasicMaterial } from "three";
-// 目标：点光源
+// 目标：设置环境纹理
+// 加载hdr环境图
+const rgbeLoader = new RGBELoader();
+rgbeLoader.loadAsync("textures/hdr/002.hdr").then((texture) => {
+  texture.mapping = THREE.EquirectangularReflectionMapping;
+  scene.background = texture;
+  scene.environment = texture;
+});
 
-// const gui = new dat.GUI();
 // 1、创建场景
 const scene = new THREE.Scene();
 
@@ -25,61 +30,44 @@ const camera = new THREE.PerspectiveCamera(
 camera.position.set(0, 0, 10);
 scene.add(camera);
 
-const sphereGeometry = new THREE.SphereBufferGeometry(1, 20, 20);
-const material = new THREE.MeshStandardMaterial();
-const sphere = new THREE.Mesh(sphereGeometry, material);
-// 投射阴影
-sphere.castShadow = true;
+// 设置cube纹理加载器
+const cubeTextureLoader = new THREE.CubeTextureLoader();
+const envMapTexture = cubeTextureLoader.load([
+  "textures/environmentMaps/1/px.jpg",
+  "textures/environmentMaps/1/nx.jpg",
+  "textures/environmentMaps/1/py.jpg",
+  "textures/environmentMaps/1/ny.jpg",
+  "textures/environmentMaps/1/pz.jpg",
+  "textures/environmentMaps/1/nz.jpg",
+]);
 
+const sphereGeometry = new THREE.SphereBufferGeometry(1, 20, 20);
+const material = new THREE.MeshStandardMaterial({
+  metalness: 0.7,
+  roughness: 0.1,
+  //   envMap: envMapTexture,
+});
+const sphere = new THREE.Mesh(sphereGeometry, material);
 scene.add(sphere);
 
-// // 创建平面
-const planeGeometry = new THREE.PlaneBufferGeometry(50, 50);
-const plane = new THREE.Mesh(planeGeometry, material);
-plane.position.set(0, -1, 0);
-plane.rotation.x = -Math.PI / 2;
-// 接收阴影
-plane.receiveShadow = true;
-scene.add(plane);
+// 给场景添加背景
+scene.background = envMapTexture;
+// 给场景所有的物体添加默认的环境贴图
+scene.environment = envMapTexture;
 
 // 灯光
 // 环境光
 const light = new THREE.AmbientLight(0xffffff, 0.5); // soft white light
 scene.add(light);
-
-const smallBall = new THREE.Mesh(
-  new THREE.SphereBufferGeometry(0.1, 20, 20),
-  new THREE.MeshBasicMaterial({ color: 0xff0000 })
-);
-smallBall.position.set(2, 2, 2);
 //直线光源
-const pointLight = new THREE.PointLight(0xff0000, 1);
-// pointLight.position.set(2, 2, 2);
-pointLight.castShadow = true;
-
-// 设置阴影贴图模糊度
-pointLight.shadow.radius = 20;
-// 设置阴影贴图的分辨率
-pointLight.shadow.mapSize.set(512, 512);
-pointLight.decay = 0;
-
-// 设置透视相机的属性
-smallBall.add(pointLight);
-scene.add(smallBall);
-
-// gui.add(pointLight.position, "x").min(-5).max(5).step(0.1);
-
-// gui.add(pointLight, "distance").min(0).max(5).step(0.001);
-// gui.add(pointLight, "decay").min(0).max(5).step(0.01);
+const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
+directionalLight.position.set(10, 10, 10);
+scene.add(directionalLight);
 
 // 初始化渲染器
 const renderer = new THREE.WebGLRenderer();
 // 设置渲染的尺寸大小
 renderer.setSize(window.innerWidth, window.innerHeight);
-// 开启场景中的阴影贴图
-renderer.shadowMap.enabled = true;
-renderer.physicallyCorrectLights = true;
-
 // console.log(renderer);
 // 将webgl渲染的canvas内容添加到body
 document.body.appendChild(renderer.domElement);
@@ -99,10 +87,6 @@ scene.add(axesHelper);
 const clock = new THREE.Clock();
 
 function render() {
-  let time = clock.getElapsedTime();
-  smallBall.position.x = Math.sin(time) * 3;
-  smallBall.position.z = Math.cos(time) * 3;
-  smallBall.position.y = 2 + Math.sin(time * 10) / 2;
   controls.update();
   renderer.render(scene, camera);
   //   渲染下一帧的时候就会调用render函数

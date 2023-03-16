@@ -6,10 +6,15 @@ import gsap from "gsap";
 // 导入dat.gui
 import * as dat from "dat.gui";
 import { RGBELoader } from "three/examples/jsm/loaders/RGBELoader";
-import { MeshBasicMaterial } from "three";
-// 目标：点光源
+// 目标：阴影的属性与投影相机原理
+// 灯光阴影
+// 1、材质要满足能够对光照有反应
+// 2、设置渲染器开启阴影的计算 renderer.shadowMap.enabled = true;
+// 3、设置光照投射阴影 directionalLight.castShadow = true;
+// 4、设置物体投射阴影 sphere.castShadow = true;
+// 5、设置物体接收阴影 plane.receiveShadow = true;
 
-// const gui = new dat.GUI();
+const gui = new dat.GUI();
 // 1、创建场景
 const scene = new THREE.Scene();
 
@@ -30,11 +35,10 @@ const material = new THREE.MeshStandardMaterial();
 const sphere = new THREE.Mesh(sphereGeometry, material);
 // 投射阴影
 sphere.castShadow = true;
-
 scene.add(sphere);
 
 // // 创建平面
-const planeGeometry = new THREE.PlaneBufferGeometry(50, 50);
+const planeGeometry = new THREE.PlaneBufferGeometry(10, 10);
 const plane = new THREE.Mesh(planeGeometry, material);
 plane.position.set(0, -1, 0);
 plane.rotation.x = -Math.PI / 2;
@@ -46,31 +50,34 @@ scene.add(plane);
 // 环境光
 const light = new THREE.AmbientLight(0xffffff, 0.5); // soft white light
 scene.add(light);
-
-const smallBall = new THREE.Mesh(
-  new THREE.SphereBufferGeometry(0.1, 20, 20),
-  new THREE.MeshBasicMaterial({ color: 0xff0000 })
-);
-smallBall.position.set(2, 2, 2);
 //直线光源
-const pointLight = new THREE.PointLight(0xff0000, 1);
-// pointLight.position.set(2, 2, 2);
-pointLight.castShadow = true;
+const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
+directionalLight.position.set(5, 5, 5);
+directionalLight.castShadow = true;
 
 // 设置阴影贴图模糊度
-pointLight.shadow.radius = 20;
+directionalLight.shadow.radius = 20;
 // 设置阴影贴图的分辨率
-pointLight.shadow.mapSize.set(512, 512);
-pointLight.decay = 0;
+directionalLight.shadow.mapSize.set(4096, 4096);
+// console.log(directionalLight.shadow);
 
-// 设置透视相机的属性
-smallBall.add(pointLight);
-scene.add(smallBall);
+// 设置平行光投射相机的属性
+directionalLight.shadow.camera.near = 0.5;
+directionalLight.shadow.camera.far = 500;
+directionalLight.shadow.camera.top = 5;
+directionalLight.shadow.camera.bottom = -5;
+directionalLight.shadow.camera.left = -5;
+directionalLight.shadow.camera.right = 5;
 
-// gui.add(pointLight.position, "x").min(-5).max(5).step(0.1);
-
-// gui.add(pointLight, "distance").min(0).max(5).step(0.001);
-// gui.add(pointLight, "decay").min(0).max(5).step(0.01);
+scene.add(directionalLight);
+gui
+  .add(directionalLight.shadow.camera, "near")
+  .min(0)
+  .max(10)
+  .step(0.1)
+  .onChange(() => {
+    directionalLight.shadow.camera.updateProjectionMatrix();
+  });
 
 // 初始化渲染器
 const renderer = new THREE.WebGLRenderer();
@@ -78,7 +85,6 @@ const renderer = new THREE.WebGLRenderer();
 renderer.setSize(window.innerWidth, window.innerHeight);
 // 开启场景中的阴影贴图
 renderer.shadowMap.enabled = true;
-renderer.physicallyCorrectLights = true;
 
 // console.log(renderer);
 // 将webgl渲染的canvas内容添加到body
@@ -99,10 +105,6 @@ scene.add(axesHelper);
 const clock = new THREE.Clock();
 
 function render() {
-  let time = clock.getElapsedTime();
-  smallBall.position.x = Math.sin(time) * 3;
-  smallBall.position.z = Math.cos(time) * 3;
-  smallBall.position.y = 2 + Math.sin(time * 10) / 2;
   controls.update();
   renderer.render(scene, camera);
   //   渲染下一帧的时候就会调用render函数
