@@ -5,15 +5,8 @@ import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import gsap from "gsap";
 // 导入dat.gui
 import * as dat from "dat.gui";
-import { RGBELoader } from "three/examples/jsm/loaders/RGBELoader";
-// 目标：设置环境纹理
-// 加载hdr环境图
-const rgbeLoader = new RGBELoader();
-rgbeLoader.loadAsync("textures/hdr/002.hdr").then((texture) => {
-  texture.mapping = THREE.EquirectangularReflectionMapping;
-  scene.background = texture;
-  scene.environment = texture;
-});
+
+// 目标：粗糙度与粗糙度贴图/金属贴图、法线贴图
 
 // 1、创建场景
 const scene = new THREE.Scene();
@@ -30,30 +23,63 @@ const camera = new THREE.PerspectiveCamera(
 camera.position.set(0, 0, 10);
 scene.add(camera);
 
-// 设置cube纹理加载器
-const cubeTextureLoader = new THREE.CubeTextureLoader();
-const envMapTexture = cubeTextureLoader.load([
-  "textures/environmentMaps/1/px.jpg",
-  "textures/environmentMaps/1/nx.jpg",
-  "textures/environmentMaps/1/py.jpg",
-  "textures/environmentMaps/1/ny.jpg",
-  "textures/environmentMaps/1/pz.jpg",
-  "textures/environmentMaps/1/nz.jpg",
-]);
+// 导入纹理
+const textureLoader = new THREE.TextureLoader();
+const doorColorTexture = textureLoader.load("./textures/door/color.jpg");
+const doorAplhaTexture = textureLoader.load("./textures/door/alpha.jpg");
+const doorAoTexture = textureLoader.load(
+  "./textures/door/ambientOcclusion.jpg"
+);
+//导入置换贴图
+const doorHeightTexture = textureLoader.load("./textures/door/height.jpg");
+// 导入粗糙度贴图
+const roughnessTexture = textureLoader.load("./textures/door/roughness.jpg");
+// 导入金属贴图
+const metalnessTexture = textureLoader.load("./textures/door/metalness.jpg");
+// 导入法线贴图
+const normalTexture = textureLoader.load("./textures/door/normal.jpg");
 
-const sphereGeometry = new THREE.SphereBufferGeometry(1, 20, 20);
+// 添加物体
+const cubeGeometry = new THREE.BoxBufferGeometry(1, 1, 1, 100, 100, 100);
+// 材质
 const material = new THREE.MeshStandardMaterial({
-  metalness: 0.7,
-  roughness: 0.1,
-  //   envMap: envMapTexture,
+  color: "#ffff00",
+  map: doorColorTexture,
+  alphaMap: doorAplhaTexture,
+  transparent: true,
+  aoMap: doorAoTexture,
+  aoMapIntensity: 1,
+  displacementMap: doorHeightTexture,
+  displacementScale: 0.1,
+  roughness: 1,
+  roughnessMap: roughnessTexture,
+  metalness: 1,
+  metalnessMap: metalnessTexture,
+  normalMap: normalTexture,
+  //   opacity: 0.3,
+  //   side: THREE.DoubleSide,
 });
-const sphere = new THREE.Mesh(sphereGeometry, material);
-scene.add(sphere);
+material.side = THREE.DoubleSide;
+const cube = new THREE.Mesh(cubeGeometry, material);
+scene.add(cube);
+// 给cube添加第二组uv
+cubeGeometry.setAttribute(
+  "uv2",
+  new THREE.BufferAttribute(cubeGeometry.attributes.uv.array, 2)
+);
 
-// 给场景添加背景
-scene.background = envMapTexture;
-// 给场景所有的物体添加默认的环境贴图
-scene.environment = envMapTexture;
+// 添加平面
+const planeGeometry = new THREE.PlaneBufferGeometry(1, 1, 200, 200);
+const plane = new THREE.Mesh(planeGeometry, material);
+plane.position.set(1.5, 0, 0);
+
+scene.add(plane);
+// console.log(plane);
+// 给平面设置第二组uv
+planeGeometry.setAttribute(
+  "uv2",
+  new THREE.BufferAttribute(planeGeometry.attributes.uv.array, 2)
+);
 
 // 灯光
 // 环境光
